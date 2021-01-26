@@ -7,7 +7,7 @@ clear all;
 clc;
 
 %% init all parameters
-MCL_init_old;
+MCL_init;
 
 %% Trim model
 
@@ -57,6 +57,9 @@ set(op.outputs(5), 'Max', 100);        % limit F_GP1 [mmHG]
  op.outputs(5).y=3;                   % F_GP1 [L/min]
 
 % Speed of rotation
+op.states(4).Known = 1; %Duke
+op.states(2).Known = 1; %Duke
+op.states(13).Known = 1; %Duke
 op.states(4).x=1*(1/RADS2TURNMIN);  % w_GP1
 op.states(2).x=1*(1/RADS2TURNMIN);  % w_GP12
 op.states(13).x=1*(1/RADS2TURNMIN); % w_GP2
@@ -87,9 +90,9 @@ set(op.states(10), 'Max', 0.0137) % limit x_VCA1 [m]
 set(op.states(19), 'Min', 0);     % limit x_VCA2 [m]
 set(op.states(19), 'Max', 0.0137) % limit x_VCA2 [m]
 
-opt = linoptions;
+opt = findopOptions; %Duke
 opt.DisplayReport='on';
-opt.OptimizerType='trust-region-reflective';
+opt.OptimizerType='graddescent-elim'; %Duke
 opt.OptimizationOptions.DiffMaxChange = 0.1;
 opt.OptimizationOptions.MaxIter = 1000;
 opt.OptimizationOptions.MaxFunEvals = 600;
@@ -105,6 +108,8 @@ DX = [op_report.states(1).dx; op_report.states(2).dx; op_report.states(3).dx; op
 X  = [op_report.states(1).x; op_report.states(2).x; op_report.states(3).x; op_report.states(4).x; op_report.states(5).x; op_report.states(6).x; op_report.states(7).x; op_report.states(8).x; op_report.states(9).x; op_report.states(10).x; op_report.states(11).x; op_report.states(12).x; op_report.states(13).x; op_report.states(14).x; op_report.states(15).x; op_report.states(16).x; op_report.states(17).x; op_report.states(18).x; op_report.states(19).x; op_report.states(20).x];
 Y  = [op_report.outputs(1).y; op_report.outputs(2).y; op_report.outputs(3).y; op_report.outputs(4).y; op_report.outputs(5).y];
 
+format shortG; %Duke
+display(X([4, 2, 13],1)*RADS2TURNMIN); %Duke
 
 %% init the MCL model from Simulink
 
