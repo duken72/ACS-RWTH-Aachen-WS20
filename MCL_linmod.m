@@ -60,9 +60,9 @@ set(op.outputs(5), 'Max', 100);        % limit F_GP1 [mmHG]
 op.states(4).Known = 1; %Duke
 op.states(2).Known = 1; %Duke
 op.states(13).Known = 1; %Duke
-op.states(4).x=1*(1/RADS2TURNMIN);  % w_GP1
-op.states(2).x=1*(1/RADS2TURNMIN);  % w_GP12
-op.states(13).x=1*(1/RADS2TURNMIN); % w_GP2
+op.states(4).x=700*(1/RADS2TURNMIN);  % w_GP1 %Dipankar
+op.states(2).x=500*(1/RADS2TURNMIN);  % w_GP12 %Dipankar
+op.states(13).x=500*(1/RADS2TURNMIN); % w_GP2 %Dipankar
 
 % Limit states/set state conditions
 set(op.states(1), 'Min', -7.5);   % Limit i_GP12 [A]
@@ -90,12 +90,15 @@ set(op.states(10), 'Max', 0.0137) % limit x_VCA1 [m]
 set(op.states(19), 'Min', 0);     % limit x_VCA2 [m]
 set(op.states(19), 'Max', 0.0137) % limit x_VCA2 [m]
 
-opt = findopOptions; %Duke
+%opt = findopOptions; %Duke
+opt = linoptions; %Dipankar
 opt.DisplayReport='on';
-opt.OptimizerType='graddescent-elim'; %Duke
+%opt.OptimizerType='graddescent-elim'; %Duke
+opt.OptimizerType='lsqnonlin'; %Dipankar
+opt.OptimizationOptions.Algorithm= 'trust-region-reflective'; %Dipankar
 opt.OptimizationOptions.DiffMaxChange = 0.1;
-opt.OptimizationOptions.MaxIter = 1000;
-opt.OptimizationOptions.MaxFunEvals = 600;
+opt.OptimizationOptions.MaxIter = 5000;
+opt.OptimizationOptions.MaxFunEvals = 1000;
 opt.OptimizationOptions.TolFun = 1.0e-004;
 opt.OptimizationOptions.TolX = 1.0e-004;
 
