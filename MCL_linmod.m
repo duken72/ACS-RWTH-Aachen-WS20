@@ -122,3 +122,18 @@ display(X([4, 2, 13],1)*RADS2TURNMIN); %Duke
 % State-space linearised model
 Sys=(ss(Al, Bl, Cl, Dl));
 set(Sys,'inputname',[{'U\_GP1'} {'U\_VCA1'} {'U\_GP12'} {'U\_GP2'} {'U\_VCA2'}], 'outputname',[{'x\_VCA1'} {'P\_pc1'} {'x\_VCA2'} {'P\_pc2'} {'F\_GP1'}]);
+
+%% Analysis of the Linearised Model
+%I = 's'*eye(size(Al));
+%TF = (Cl*inv(I-Al)*Bl) + Dl;
+
+TF = tf(Sys); %Tranfer Function of the System
+P = pole(TF); %Poles of the Tranfer Function
+
+SysStable = isstable(TF); %System Stablility check
+
+if(SysStable == 1)
+    fprintf("\nSystem is Stable and has no RHP \n");
+else
+    fprintf("\nSystem is Unstable and has RHP \n");
+end
