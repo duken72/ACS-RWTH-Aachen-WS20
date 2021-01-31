@@ -138,33 +138,47 @@ else
     fprintf("\nSystem is Unstable and has RHP \n");
 end
 
-%% Controlabililty & Observability
+%%%%%%%%%%%%%%%%%%%
 
-tol = 5*10^-8;
+%% Task 3.1.1. The stable operating point
+fprintf('\nTask 3.1.1. The stable operating point');
+format shortG; %Duke
+display(U);
+display(Y)
+%display(X([4, 2, 13],1)*RADS2TURNMIN); %Duke
 
-%Controllabillity Check
-[AbarC,BbarC,CbarC,TC,kC] = ctrbf(Al,Bl,Cl,tol);
+%% Task 3.1.2. Analysis of the linearised model
+fprintf('Task 3.1.2. Analysis of the linearised model\n');
+fprintf('The dimension of the system matrix is: %g.\n', length(Al));
+[b,a] = ss2tf(Al,Bl,Cl,Dl,5); %Have not remove 0 elements of b
+fprintf('The order of the tf matrix of the system is: %g.\n', max(max(size(a)),max(size(b))));
 
-%disp(AbarC);
-%disp(BbarC);
-%disp(CbarC);
+poles = pole(Sys);
+fprintf('Number of unstable poles: %g.\n\n', size(poles(real(poles)>0,:),1));
 
-Co = ctrb(Al,Bl);
-unco = length(Al) - rank(Co);
-fprintf("\n Display Rank of Controllability Matrix: %d", rank(Co));
+zeros = tzero(Sys);
+fprintf('Number of RHP zeros: %g.\n', size(zeros(real(zeros)>0,:),1));
 
-fprintf("\n Number of controllable states in the system are: %d", sum(kC));
+%% Task 3.1.3. Controllability and observability
+fprintf('Task 3.1.3. Controllability and observability\n');
+tol = 5E-08;
+% Controllability
+[Actrb,Bctrb,Cctrb,Tctrb,kctrb] = ctrbf(Al,Bl,Cl,tol);
+% Observability
+[Aobsv,Bobsv,Cobsv,Tobsv,kobsv] = obsvf(Al,Bl,Cl,tol);
 
-%Observability Check
-[AbarO,BbarO,CbarO,TO,kO] = obsvf(Al,Bl,Cl,tol);
+fprintf('The number of states are not controllable: %g.\n', length(Al)-sum(kctrb));
+fprintf('The number of states are not observable: %g.\n\n', length(Al)-sum(kobsv));
 
-%disp(AbarO);
-%disp(BbarO);
-%disp(CbarO);
+%% Task 3.2.1. Hankel Singular Values
+fprintf('Task 3.2.1. Hankel Singular Values\n');
+hsvd(Sys);
+[redModel] = balred(Sys, 17);
 
-Ob = obsv(Al,Cl);
-unob = length(Al) - rank(Ob);
+%% Task 3.2.2. Reduce the model
+fprintf('Task 3.2.2. Reduce the model\n');
 
-fprintf("\n Display Rank of Observability Matrix: %d", rank(Ob));
-
-fprintf("\n Number of Observable states in the system are: %d", sum(kO));
+%% Task 3.2.3. Minimal realisation
+fprintf('\nTask 3.2.3. Minimal realisation\n');
+minimalSys = minreal(Sys, tol);
+%display(minimalSys);
