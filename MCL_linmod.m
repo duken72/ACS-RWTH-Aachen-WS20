@@ -137,3 +137,34 @@ if(SysStable == 1)
 else
     fprintf("\nSystem is Unstable and has RHP \n");
 end
+
+%% Controlabililty & Observability
+
+tol = 5*10^-8;
+
+%Controllabillity Check
+[AbarC,BbarC,CbarC,TC,kC] = ctrbf(Al,Bl,Cl,tol);
+
+%disp(AbarC);
+%disp(BbarC);
+%disp(CbarC);
+
+Co = ctrb(Al,Bl);
+unco = length(Al) - rank(Co);
+fprintf("\n Display Rank of Controllability Matrix: %d", rank(Co));
+
+fprintf("\n Number of controllable states in the system are: %d", sum(kC));
+
+%Observability Check
+[AbarO,BbarO,CbarO,TO,kO] = obsvf(Al,Bl,Cl,tol);
+
+%disp(AbarO);
+%disp(BbarO);
+%disp(CbarO);
+
+Ob = obsv(Al,Cl);
+unob = length(Al) - rank(Ob);
+
+fprintf("\n Display Rank of Observability Matrix: %d", rank(Ob));
+
+fprintf("\n Number of Observable states in the system are: %d", sum(kO));
