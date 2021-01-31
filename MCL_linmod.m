@@ -182,3 +182,21 @@ fprintf('Task 3.2.2. Reduce the model\n');
 fprintf('\nTask 3.2.3. Minimal realisation\n');
 minimalSys = minreal(Sys, tol);
 %display(minimalSys);
+
+%% Model Reduction
+[GS,GNS]=stabsep(Sys); %Decoupling Stable(GS) and Unstable(GNS) I/Os
+
+mSys = sminreal(GS); %Structural Pole/Zero cancellations
+
+order = sum(hsv~=Inf & hsv>1); %order of the reduced model
+opts = balredOptions('StateElimMethod', 'MatchDC'); %option definition for removal of weakly coupled states
+rSys = balred(mSys,order,opts,tol); %reduced order approximation of the LTI model
+
+
+%% Minimum Realisation
+Sysr = minreal(rSys); %minimum realization 
+
+
+%% RGA
+[ASysr, BSysr, CSysr, DSysr] = ssdata(Sysr);
+ARga = (ASysr).*pinv(ASysr.'); %RGA computation
