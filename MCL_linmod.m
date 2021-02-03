@@ -60,6 +60,9 @@ set(op.outputs(5), 'Max', 100);        % limit F_GP1 [mmHG]
 op.states(4).Known = 1; %Duke
 op.states(2).Known = 1; %Duke
 op.states(13).Known = 1; %Duke
+op.states(4).SteadyState = 1; %Duke
+op.states(2).SteadyState = 1; %Duke
+op.states(13).SteadyState = 1; %Duke
 op.states(4).x=700*(1/RADS2TURNMIN);  % w_GP1 %Dipankar
 op.states(2).x=500*(1/RADS2TURNMIN);  % w_GP12 %Dipankar
 op.states(13).x=500*(1/RADS2TURNMIN); % w_GP2 %Dipankar
@@ -75,18 +78,12 @@ set(op.states(11), 'Min', -7.5);  % Limit i_VCA1 [A]
 set(op.states(11), 'Max', 7.5);   % Limit i_VCA1[A]
 set(op.states(20), 'Min', -7.5);  % Limit i_VCA2 [A]
 set(op.states(20), 'Max', 7.5);   % Limit i_VCA2[A]
-
-
 set(op.states(5), 'Min', -20);    % Limit P_pc1 [mmHG]?
 set(op.states(5), 'Max', 200);    % Limit P_pc1 [mmHG]?
-
 set(op.states(14), 'Min', -20);   % Limit P_pc2 [mmHG]?
 set(op.states(14), 'Max', 200);   % Limit P_pc2 [mmHG]?
-
-
 set(op.states(10), 'Min', 0);     % limit x_VCA1 [m]
 set(op.states(10), 'Max', 0.0137) % limit x_VCA1 [m]
-
 set(op.states(19), 'Min', 0);     % limit x_VCA2 [m]
 set(op.states(19), 'Max', 0.0137) % limit x_VCA2 [m]
 
@@ -111,9 +108,6 @@ DX = [op_report.states(1).dx; op_report.states(2).dx; op_report.states(3).dx; op
 X  = [op_report.states(1).x; op_report.states(2).x; op_report.states(3).x; op_report.states(4).x; op_report.states(5).x; op_report.states(6).x; op_report.states(7).x; op_report.states(8).x; op_report.states(9).x; op_report.states(10).x; op_report.states(11).x; op_report.states(12).x; op_report.states(13).x; op_report.states(14).x; op_report.states(15).x; op_report.states(16).x; op_report.states(17).x; op_report.states(18).x; op_report.states(19).x; op_report.states(20).x];
 Y  = [op_report.outputs(1).y; op_report.outputs(2).y; op_report.outputs(3).y; op_report.outputs(4).y; op_report.outputs(5).y];
 
-format shortG; %Duke
-display(X([4, 2, 13],1)*RADS2TURNMIN); %Duke
-
 %% init the MCL model from Simulink
 
 % Load state-space data from MCL simulink model
@@ -122,23 +116,6 @@ display(X([4, 2, 13],1)*RADS2TURNMIN); %Duke
 % State-space linearised model
 Sys=(ss(Al, Bl, Cl, Dl));
 set(Sys,'inputname',[{'U\_GP1'} {'U\_VCA1'} {'U\_GP12'} {'U\_GP2'} {'U\_VCA2'}], 'outputname',[{'x\_VCA1'} {'P\_pc1'} {'x\_VCA2'} {'P\_pc2'} {'F\_GP1'}]);
-
-%% Analysis of the Linearised Model
-%I = 's'*eye(size(Al));
-%TF = (Cl*inv(I-Al)*Bl) + Dl;
-
-TF = tf(Sys); %Tranfer Function of the System
-P = pole(TF); %Poles of the Tranfer Function
-
-SysStable = isstable(TF); %System Stablility check
-
-if(SysStable == 1)
-    fprintf("\nSystem is Stable and has no RHP \n");
-else
-    fprintf("\nSystem is Unstable and has RHP \n");
-end
-
-%%%%%%%%%%%%%%%%%%%
 
 %% Task 3.1.1. The stable operating point
 fprintf('\nTask 3.1.1. The stable operating point');
@@ -151,13 +128,13 @@ display(Y)
 fprintf('Task 3.1.2. Analysis of the linearised model\n');
 fprintf('The dimension of the system matrix is: %g.\n', length(Al));
 [b,a] = ss2tf(Al,Bl,Cl,Dl,5); %Have not remove 0 elements of b
-fprintf('The order of the tf matrix of the system is: %g.\n', max(max(size(a)),max(size(b))));
+fprintf('The order of the tf matrix of the system is: %g.\n', max(max(size(a)),max(size(b)))-1);
 
-poles = pole(Sys);
-fprintf('Number of unstable poles: %g.\n\n', size(poles(real(poles)>0,:),1));
+polesSys = pole(Sys);
+fprintf('Number of unstable poles: %g.\n', size(polesSys(real(polesSys)>0,:),1));
 
-zeros = tzero(Sys);
-fprintf('Number of RHP zeros: %g.\n', size(zeros(real(zeros)>0,:),1));
+zerosSys = tzero(Sys);
+fprintf('Number of RHP zeros: %g.\n\n', size(zerosSys(real(zerosSys)>0,:),1));
 
 %% Task 3.1.3. Controllability and observability
 fprintf('Task 3.1.3. Controllability and observability\n');
@@ -171,32 +148,75 @@ fprintf('The number of states are not controllable: %g.\n', length(Al)-sum(kctrb
 fprintf('The number of states are not observable: %g.\n\n', length(Al)-sum(kobsv));
 
 %% Task 3.2.1. Hankel Singular Values
-fprintf('Task 3.2.1. Hankel Singular Values\n');
-hsvd(Sys);
-[redModel] = balred(Sys, 17);
+fprintf('Task 3.2.1. Hankel Singular Values\n\n');
+hsv = hsvd(Sys);
+figure(1);
+h = hsvplot(Sys);
 
 %% Task 3.2.2. Reduce the model
 fprintf('Task 3.2.2. Reduce the model\n');
+[redSys3] = balred(Sys,3);
+[redSys5] = balred(Sys,5);
+[redSys10] = balred(Sys,10);
+[redSys11] = balred(Sys,11);
+[redSys12] = balred(Sys,12);
+
+t = 0:0.1:10;
+s0 = step(Sys,t);
+s3 = step(redSys3,t);
+s10 = step(redSys10,t);
+s11 = step(redSys11,t);
+s12 = step(redSys12,t);
+
+figure(2);
+i=4; j=4;
+%plot(s0(:,i,j),'DisplayName','original system');
+plot(s0(:,i,j)-s3(:,i,j),'DisplayName','redSys3'); hold on;
+plot(s0(:,i,j)-s10(:,i,j),'DisplayName','redSys10');
+plot(s0(:,i,j)-s11(:,i,j),'DisplayName','redSys11');
+plot(s0(:,i,j)-s12(:,i,j),'DisplayName','redSys12');
+legend;
+xlabel('time'); ylabel('response');
+
+[b_red,a_red] = ss2tf(redSys12.a,redSys12.b,redSys12.c,redSys12.d,5);
+fprintf('The order of the reduced model: %g.\n\n', max(max(size(a_red)),max(size(b_red)))-1);
 
 %% Task 3.2.3. Minimal realisation
-fprintf('\nTask 3.2.3. Minimal realisation\n');
-minimalSys = minreal(Sys, tol);
-%display(minimalSys);
+fprintf('Task 3.2.3. Minimal realisation');
+minSys = minreal(redSys3, tol);
+display(minSys);
 
-%% Model Reduction
-[GS,GNS]=stabsep(Sys); %Decoupling Stable(GS) and Unstable(GNS) I/Os
+%% Task 3.2.4. RGA
+fprintf('Task 3.2.4. Static Relative Gain Array');
+minG = zeros(5);
+for i=1:5
+    [minA, minB] = ss2tf(minSys.a, minSys.b, minSys.c, minSys.d, i);
+    minG(:,i) = minA(:,1) / minB(1);
+end
+sRGA = minG.*pinv(minG).';
+rsRGA = round(sRGA,2);
+display(rsRGA);
 
-mSys = sminreal(GS); %Structural Pole/Zero cancellations
+%% Task 3.2.5. Scaling
+fprintf('Task 3.2.5. Scaling');
+Du = diag([24, 24, 24, 24, 24]);
+De = eye(5);
+Dd = eye(5);
 
-order = sum(hsv~=Inf & hsv>1); %order of the reduced model
-opts = balredOptions('StateElimMethod', 'MatchDC'); %option definition for removal of weakly coupled states
-rSys = balred(mSys,order,opts,tol); %reduced order approximation of the LTI model
+scaled_G = pinv(De) * minG * Du;
+display(scaled_G);
 
+%% Task 3.3.1. Sources for uncertainty
+fprintf('Task 3.3.1. Sources for uncertainty\n\n');
 
-%% Minimum Realisation
-Sysr = minreal(rSys); %minimum realization 
+%% Task 3.3.2. Weighting functions for uncertainty
+fprintf('Task 3.3.2. Weighting functions for uncertainty\n\n');
 
+%% Task 3.3.3. Visualize uncertain system
+fprintf('Task 3.3.3. Visualize uncertain system\n\n');
 
-%% RGA
-[ASysr, BSysr, CSysr, DSysr] = ssdata(Sysr);
-ARga = (ASysr).*pinv(ASysr.'); %RGA computation
+%% Task 3.4. H-inf-controller synthesis
+fprintf('Task 3.4. H-inf-controller synthesis\n');
+
+%%
+fprintf('\nThank you for reviewing this report!\n');
