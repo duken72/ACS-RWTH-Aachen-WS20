@@ -226,14 +226,12 @@ ARga = (G).*pinv(G).'; %RGA computation from SS model
 display(round(ARga,2));
 
 TFrSysr = tf(minSys);
-%G1 = dcgain(TFrSysr);
-%ARga1 = (G1).*pinv(G1).'; %RGA computation from TF of SS model
-%display(ARga1);
+
 
 %% Task 3.2.5 Scaling
 fprintf('\nTask 3.2.5. Scaling\n');
 Du = diag([24,24,24,24,24]);
-Dy = eye(5);
+Dy = diag([0.0137,200,0.0137,200,100]);
 Dd = eye(5);
 
 TFrSysr_scaled = pinv(Dy)*TFrSysr*Du;
@@ -243,7 +241,7 @@ TFrSysr_scaled = pinv(Dy)*TFrSysr*Du;
 %% Task 3.3.2. Weighting functions for uncertainty
 fprintf('Task 3.3.2. Weighting functions for uncertainty\n\n');
 
-%G = minreal(ss(TFrSysr_scaled)).NominalValue;
+G = minreal(ss(TFrSysr_scaled));
 %Wxvca12 = makeweight(.1,5,1);
 %Wppc12 = makeweight(.3,2.5,1);
 %wppfgpq = makeweight(.1,1.5,1);
@@ -252,6 +250,48 @@ fprintf('Task 3.3.2. Weighting functions for uncertainty\n\n');
 %Delta3 = ultidyn('Delta3',[1 1]);
 %G = H*blkdiag(1+W1*Delta1,1+W2*Delta2,1+W1*Delta1,1+W2*Delta2, 1+w1*Delta3);
 
-Gs = minreal(ss(TFrSysr_scaled));
-G = uss(Gs);
-[Li,phi,w0] = bode(Gs-G.NominalValue/G.NominalValue);
+Delta = ultidyn('Delta',[5 5],'Bound',1);
+Wxvca12 = makeweight(.1,1,5);
+Wppc12 = makeweight(.3,1,2.5);
+wppfgpq = makeweight(.1,1,1.5); 
+W1 = diag([Wxvca12.A,Wppc12.A,Wxvca12.A,Wppc12.A,wppfgpq.A]);
+W2 = diag([Wxvca12.B,Wppc12.B,Wxvca12.B,Wppc12.B,wppfgpq.B]);
+W3 = diag([Wxvca12.C,Wppc12.C,Wxvca12.C,Wppc12.C,wppfgpq.C]);
+W4 = diag([Wxvca12.D,Wppc12.D,Wxvca12.D,Wppc12.D,wppfgpq.D]);
+W = ss(W1,W2,W3,W4);
+E = Delta*W;
+% Delta = ultidyn('Delta',[5 1],'Bound',1);
+% s = tf('s');
+% R01 = 0.1; R02 = 0.3; R03 = 0.1;
+% Rinf1 = 5; Rinf2 = 2.5; Rinf3 = 1.5;
+% tau1 = 1; tau2 = 2; tau3 = 1;
+% 
+% w1 = (tau1*s + R01)/(1+s*tau1/Rinf1);
+% w2 = (tau2*s + R02)/(1+s*tau2/Rinf2);
+% w3 = (tau3*s + R03)/(1+s*tau3/Rinf3);
+% 
+% W = [w1,w2,w1,w2,w3];
+% E = Delta*W;
+% for i=1:5
+%     E(i,i+1:end)=0;
+%     E(i,1:i-1)=0;
+% end
+
+Gp = G*(eye(5)+E);
+bodemag(Gp);
+
+%%
+
+opt = stepDataOptions('StepAmplitude',0.001);
+figure(5);
+step(Gp,opt)
+legend;
+xlabel('time'); ylabel('response');
+
+figure(6);
+step(Gp)
+legend;
+xlabel('time'); ylabel('response');
+
+%%
+
