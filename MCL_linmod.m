@@ -233,7 +233,7 @@ TFrSysr = tf(minSys);
 %% Task 3.2.5 Scaling
 fprintf('\nTask 3.2.5. Scaling\n');
 Du = diag([24,24,24,24,24]);
-Dy = eye(1);
+Dy = eye(5);
 Dd = eye(5);
 
 TFrSysr_scaled = pinv(Dy)*TFrSysr*Du;
