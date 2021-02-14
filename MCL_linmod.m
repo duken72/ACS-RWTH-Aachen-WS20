@@ -276,22 +276,66 @@ E = Delta*W;
 %     E(i,i+1:end)=0;
 %     E(i,1:i-1)=0;
 % end
-
 Gp = G*(eye(5)+E);
+set(Gp,'inputname',[{'U_GP1'} {'U_VCA1'} {'U_GP12'} {'U_GP2'} {'U_VCA2'}]);
+set(Gp,'outputname',[{'xm_VCA1'} {'Pm_pc1'} {'xm_VCA2'} {'Pm_pc2'} {'Fm_GP1'}]);
 bodemag(Gp);
-
 %%
 
 opt = stepDataOptions('StepAmplitude',0.001);
-figure(5);
+figure(6);
 step(Gp,opt)
 legend;
 xlabel('time'); ylabel('response');
 
-figure(6);
-step(Gp)
+opt1 = stepDataOptions('StepAmplitude',1);
+figure(7);
+step(Gp,opt1)
 legend;
 xlabel('time'); ylabel('response');
 
 %%
+% for i=1:5
+% [YppC,tppC] = step(Gpp(2,i));
+% sserror(i)=abs(1-YppC(end));
+% end
+% 
+% [M,Delta1] = lftdata(Gpp);
+% [K,CL,gamma] = hinfsyn(M);
+% Tinf = feedback(Gpp*K,1);
+% figure(8);
+% step(Tinf);
 
+s = tf('s');
+Wppc1 = 1/s;
+Wppc2 = 1/s;
+r1 = 0.01372; Wxvca2 = 0.01372; Wfgp1 = ss(0);
+Sum1 = sumblk('e1 = r1 - x_VCA1',1);
+Sum2 = sumblk('e3 = r1 - x_VCA2',1);
+%Wxvca1 = 1/s - (52252789446435703*2^(1/2)*21298081631339^(1/2)*pi^(1/2)*exp((6155145591456971*s^2)/590295810358705651712)*erfc((17*2^(1/2)*21298081631339^(1/2)*s)/34359738368))/87042659012253300578844672;
+%Wxvca2 = 1/s - (52252789446435703*2^(1/2)*21298081631339^(1/2)*pi^(1/2)*exp((6155145591456971*s^2)/590295810358705651712)*erfc((17*2^(1/2)*21298081631339^(1/2)*s)/34359738368))/87042659012253300578844672;
+%Wfgp1 = psi(s/4)/4 - psi(s/4 + 1/2)/4 + 1/s;
+%Wxvca1.u = 'xm_VCA1'; Wxvca1.y = 'e1';
+%Wxvca2.u = 'xm_VCA2'; Wxvca2.y = 'e2';
+Wppc1.u = 'Pm_pc1'; Wppc1.y = 'e2';
+Wppc2.u = 'Pm_pc2'; Wppc2.y = 'e4';
+Wfgp1.u = 'Fm_GP1'; Wfgp1.y = 'e5';
+
+ICinputs = {'U_GP1';'U_VCA1';'U_GP12';'U_GP2';'U_VCA2'}; %'F_VAD'
+ICoutputs = {'xm_VCA1';'Pm_pc1';'xm_VCA2';'Pm_pc2';'Fm_GP1'};
+mcl = connect(Gp, Sum1, Sum2, Wppc1, Wppc2, Wfgp1, ICinputs, ICoutputs);
+ncont = 5; % 5 control signals
+nmeas = 5; % 5 measurement signals
+[K,~,gamma] = hinfsyn(mcl,nmeas,ncont);
+
+K.u={'xm_VCA1';'Pm_pc1';'xm_VCA2';'Pm_pc2';'Fm_GP1'};
+K.y={'U_GP1';'U_VCA1';'U_GP12';'U_GP2';'U_VCA2'};
+
+%Closed Loop
+
+CL = connect(Gp.nominal,K,ICinputs,ICoutputs );
+
+figure(8);
+step(CL);
+%% The End
+fprintf('\nThank you for reviewing this report!\n');
