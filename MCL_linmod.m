@@ -3,7 +3,7 @@
 % and transfers it into the state-space linearised model  
 % and into the transfer function matrix 
 
-%% init all parameters
+% init all parameters
 MCL_init;
 
 %% Trim model
@@ -160,7 +160,7 @@ hsvs = hsvd(SysS);
 figure(2);
 hsvplot(SysS);
 
-% Reduce the stable model part
+%% Reduce the stable model part
 redOrder = 5;
 [redSysS] = balred(SysS,redOrder);
 
@@ -169,6 +169,7 @@ figure(3);
 step(SysS,'r',redSysS,'g--')
 legend;
 xlabel('time'); ylabel('response');
+title('Step response of stable and reduced stable models');
 
 %% Combine the reduced stable part and the unstable part
 orderRedSysU = length(SysU.A);
@@ -182,6 +183,7 @@ figure(4);
 step(Sys,'r',redSys,'g--')
 legend;
 xlabel('time'); ylabel('response');
+title('Step response of initial and reduced models');
 %% Task 3.2.3. Minimal realisation
 fprintf('Task 3.2.3. Minimal realisation\n');
 minSys = minreal(redSysS, tol);
@@ -189,13 +191,7 @@ display(minSys);
 
 %% Task 3.2.4. RGA
 fprintf('Task 3.2.4. Static Relative Gain Array');
-minG = tf(minSys);
-minsG = zeros(5);
-for i=1:5
-    for j=1:5
-        minsG(i,j) = minG.Numerator{i,j}(end) / minG.Denominator{i,j}(end);
-    end
-end
+minsG = dcgain(minSys);
 sRGA = minsG.*pinv(minsG).';
 rsRGA = round(sRGA,3);
 display(rsRGA);
@@ -203,21 +199,83 @@ display(rsRGA);
 %% Task 3.2.5. Scaling
 fprintf('Task 3.2.5. Scaling');
 Du = diag([24, 24, 24, 24, 24]);
-De = eye(5);
+De = diag([0.0137, 200, 0.0137, 200, 1]);
 Dd = eye(5);
 
+minG = tf(minSys);
 scaled_G = pinv(De) * minG * Du;
 display(scaled_G);
 
 %% Task 3.3.2. Weighting functions for uncertainty
 fprintf('Task 3.3.2. Weighting functions for uncertainty\n\n');
 
+Delta = ultidyn('Delta', [5 5], 'Bound', 1);
+Wxvca = makeweight(.1, 1, 5);
+Wppc  = makeweight(.3, 1, 2.5);
+Wfgp1 = makeweight(.1, 1, 1.5);
+
+WA = diag([Wxvca.A,Wppc.A,Wxvca.A,Wppc.A,Wfgp1.A]);
+WB = diag([Wxvca.B,Wppc.B,Wxvca.B,Wppc.B,Wfgp1.B]);
+WC = diag([Wxvca.C,Wppc.C,Wxvca.C,Wppc.C,Wfgp1.C]);
+WD = diag([Wxvca.D,Wppc.D,Wxvca.D,Wppc.D,Wfgp1.D]);
+W = ss(WA,WB,WC,WD);
+
+scaledSys = minreal(ss(scaled_G));
+scaledSys.InputName = {'U_GP1', 'U_VCA1', 'U_GP12', 'U_GP2', 'U_VCA2'};
+scaledSys.OutputName = {'x_VCA1', 'P_PC1', 'x_VCA2', 'P_PC2', 'F_GP1'};
+
+Gp = (eye(5)+W*Delta)*scaledSys;
+
+Gp.OutputName = {'xm_VCA1', 'Pm_PC1', 'xm_VCA2', 'Pm_PC2', 'Fm_GP1'};
+%display(Gp);
 
 %% Task 3.3.3. Visualize uncertain system
 fprintf('Task 3.3.3. Visualize uncertain system\n\n');
+opt = stepDataOptions('StepAmplitude',0.001);
+
+figure(5);
+step(scaledSys,'r.',Gp,'b--',7,opt)
+xlabel('time'); ylabel('response'); legend;
+title('Step response with amplitude of 0.001');
+
+figure(6);
+step(scaledSys,'r.',Gp,'b--',7)
+xlabel('time'); ylabel('response'); legend;
+title('Step response with amplitude of 1');
 
 %% Task 3.4. H-inf-controller synthesis
 fprintf('Task 3.4. H-inf-controller synthesis\n');
 
-%%
+% Define the objective values for H-inf-controller to minimize
+%{
+syms x
+sigma = 0.0137 / 3;
+f1 = 1 - 1/(sigma*sqrt(2*pi))*exp(-0.5*x^2/sigma^2)/72;
+f2 = 0.5-tanh(x)/2;
+Wxvca1, Wxvca2 = laplace(f1);
+Wfgp1 = laplace(f2);
+%}
+
+s = tf('s');
+Wppc1 = s;
+Wppc2 = s;
+Wxvca1 = ss(0); Wxvca2 = ss(0); Wfgp1 = ss(0);
+%Wxvca1 = 1/s - (52252789446435703*2^(1/2)*21298081631339^(1/2)*pi^(1/2)*exp((6155145591456971*s^2)/590295810358705651712)*erfc((17*2^(1/2)*21298081631339^(1/2)*s)/34359738368))/87042659012253300578844672;
+%Wxvca2 = 1/s - (52252789446435703*2^(1/2)*21298081631339^(1/2)*pi^(1/2)*exp((6155145591456971*s^2)/590295810358705651712)*erfc((17*2^(1/2)*21298081631339^(1/2)*s)/34359738368))/87042659012253300578844672;
+%Wfgp1 = psi(s/4)/4 - psi(s/4 + 1/2)/4 + 1/s;
+Wxvca1.u = 'xm_VCA1'; Wxvca1.y = 'e1';
+Wxvca2.u = 'xm_VCA2'; Wxvca2.y = 'e2';
+Wppc1.u = 'Pm_PC1'; Wppc1.y = 'e3';
+Wppc2.u = 'Pm_PC2'; Wppc2.y = 'e4';
+Wfgp1.u = 'Fm_GP1'; Wfgp1.y = 'e5';
+
+ICinputs = {'U_GP1';'U_VCA1';'U_GP12';'U_GP2';'U_VCA2'}; %'F_VAD'
+ICoutputs = {'e1';'e2';'e3';'e4';'e5';'xm_VCA1';'Pm_PC1';'xm_VCA2';'Pm_PC2';'Fm_GP1'};
+mcl = connect(Gp, Wxvca1, Wxvca2, Wppc1, Wppc2, Wfgp1, ICinputs, ICoutputs);
+ncont = 5; % 5 control signals
+nmeas = 5; % 5 measurement signals
+[K,~,gamma] = hinfsyn(mcl,nmeas,ncont);
+
+display(K)
+%% The End
 fprintf('\nThank you for reviewing this report!\n');
