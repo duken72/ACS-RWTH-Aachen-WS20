@@ -6,3 +6,7 @@ Winter Semester 2020
 
 Course work
 Mock Circulatory Control loop
+
+## License
+
+See the [LICENSE](LICENSE.md) file for license rights and limitations (MIT).
